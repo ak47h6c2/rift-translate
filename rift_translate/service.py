@@ -69,6 +69,11 @@ def _clean_json_text(value: str) -> str:
     return value
 
 
+def _text_field(value: Any) -> str:
+    """Ignore malformed structured fields rather than exposing Python values."""
+    return value.strip() if isinstance(value, str) else ""
+
+
 def parse_chat_result(raw: str) -> dict[str, Any]:
     try:
         payload = json.loads(_clean_json_text(raw))
@@ -88,6 +93,9 @@ def parse_chat_result(raw: str) -> dict[str, Any]:
             "reply_suggestion": "",
         }
 
+    if not isinstance(payload, dict):
+        payload = {}
+
     lines = payload.get("lines")
     if not isinstance(lines, list):
         lines = []
@@ -96,13 +104,15 @@ def parse_chat_result(raw: str) -> dict[str, Any]:
     for item in lines:
         if not isinstance(item, dict):
             continue
+        if not _text_field(item.get("chinese")):
+            continue
         normalized_lines.append(
             {
-                "speaker": str(item.get("speaker", "")).strip(),
-                "original": str(item.get("original", "")).strip(),
-                "chinese": str(item.get("chinese", "")).strip(),
-                "tone": str(item.get("tone", "neutral")).strip() or "neutral",
-                "notes": str(item.get("notes", "")).strip(),
+                "speaker": _text_field(item.get("speaker")),
+                "original": _text_field(item.get("original")),
+                "chinese": _text_field(item.get("chinese")),
+                "tone": _text_field(item.get("tone")) or "neutral",
+                "notes": _text_field(item.get("notes")),
             }
         )
 
@@ -111,19 +121,19 @@ def parse_chat_result(raw: str) -> dict[str, Any]:
         terms = []
     normalized_terms = []
     for item in terms:
-        if isinstance(item, dict) and item.get("term"):
+        if isinstance(item, dict) and _text_field(item.get("term")):
             normalized_terms.append(
                 {
-                    "term": str(item.get("term", "")).strip(),
-                    "meaning": str(item.get("meaning", "")).strip(),
+                    "term": _text_field(item.get("term")),
+                    "meaning": _text_field(item.get("meaning")),
                 }
             )
 
     return {
         "lines": normalized_lines,
-        "summary": str(payload.get("summary", "")).strip(),
+        "summary": _text_field(payload.get("summary")),
         "terms": normalized_terms,
-        "reply_suggestion": str(payload.get("reply_suggestion", "")).strip(),
+        "reply_suggestion": _text_field(payload.get("reply_suggestion")),
     }
 
 

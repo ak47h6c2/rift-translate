@@ -70,3 +70,33 @@ def test_overlay_height_can_grow_beyond_old_260_pixel_cap() -> None:
     assert clamp_overlay_height(350, 1080) == 350
     assert clamp_overlay_height(900, 1080) == 420
     assert clamp_overlay_height(350, 300) == 260
+
+
+def test_blank_tail_does_not_hide_recent_valid_chat() -> None:
+    name = "很长的召唤师名字_WithTag#12345"
+    content = build_chat_overlay_content({"lines": [
+        {"speaker": name, "chinese": "等我再开团"},
+        None, {}, {"chinese": "  "},
+    ]}, max_lines=1)
+    assert content.chat_lines[0].speaker == name
+    assert content.chat_lines[0].message == "等我再开团"
+
+
+def test_long_speaker_layout_preserves_name_and_fits_width() -> None:
+    import tkinter as tk
+    from rift_translate.overlay import GameOverlay
+
+    root = tk.Tk()
+    root.withdraw()
+    try:
+        overlay = GameOverlay(root, lambda: (0, 0))
+        name = "超长召唤师名字" * 4 + "#SG2"
+        overlay._render_body(build_chat_overlay_content({"lines": [
+            {"speaker": name, "chinese": "等我再开团，我们先拿小龙。" * 4},
+        ]}))
+        root.update_idletasks()
+        labels = overlay._chat_body.winfo_children()
+        assert labels[0].cget("text") == name
+        assert overlay._chat_body.winfo_reqwidth() <= overlay.WIDTH - 40
+    finally:
+        root.destroy()

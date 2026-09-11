@@ -80,13 +80,15 @@ def build_chat_overlay_content(
         source_lines = []
 
     chat_lines: list[OverlayChatLine] = []
-    for line in source_lines[-max(1, max_lines) :]:
+    for line in source_lines:
         if not isinstance(line, dict):
             continue
         speaker = _compact(line.get("speaker"))
         chinese = _compact(line.get("chinese"))
         if chinese:
             chat_lines.append(OverlayChatLine(speaker=speaker, message=chinese))
+
+    chat_lines = chat_lines[-max(1, max_lines) :]
 
     if not chat_lines:
         summary = _compact(result.get("summary"))
@@ -266,12 +268,13 @@ class GameOverlay(tk.Toplevel):
             if line.speaker:
                 tk.Label(
                     self._chat_body,
-                    text=line.speaker[:24],
+                    text=line.speaker,
                     bg=OVERLAY_PANEL,
                     fg=OVERLAY_GOLD,
                     font=("Arial", 9, "bold"),
                     anchor="ne",
                     justify="right",
+                    wraplength=110,
                 ).grid(row=row, column=0, padx=(0, 7), pady=2, sticky="ne")
             tk.Label(
                 self._chat_body,
